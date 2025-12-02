@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Laundry Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/img/favicon/favicon-16x16.png">
+    <link rel="manifest" href="../assets/img/favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+
+   <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f5f5f7; color: #1d1d1f; }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #f1f1f1; } ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+   </style>
+</head>
+<body class="antialiased min-h-screen pb-10">
+
+<div id="toast" class="fixed top-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-xl transform translate-x-full transition-transform duration-300 z-[9999] flex items-center gap-3">
+    <i class="fas fa-info-circle"></i>
+    <span id="toastMsg">Notification</span>
+</div>
+
+<header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <img src="./assets/img/blue-logo.png" alt="Logo" class="w-8 h-8">
+            <h1 id="headerBusinessName" class="font-bold text-xl tracking-tight text-blue-600">Settings</h1>
+        </div>
+        <a href="./index.html" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition">
+            <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+        </a>
+    </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-5 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-900 text-lg">General Settings</h3>
+            <p class="text-xs text-gray-500 mt-1">Manage your business details, currency, and tax rates.</p>
+        </div>
+
+        <form id="settingsForm" class="p-5 space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Business Name</label>
+                    <input type="text" id="businessName" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Your Laundry Business" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Business Address</label>
+                    <input type="text" id="businessAddress" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="123 Main St, City">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Display Currency</label>
+                    <select id="currencyCode" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" required>
+                        <option value="NGN">Nigerian Naira (NGN)</option>
+                        <option value="USD">US Dollar (USD)</option>
+                        <option value="EUR">Euro (EUR)</option>
+                        <option value="GBP">British Pound (GBP)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Tax Rate (%)</label>
+                    <input type="number" id="taxRate" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="e.g., 7.5" step="0.01" min="0">
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100 space-y-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Exchange Rates (Base: NGN)</h4>
+                        <p class="text-xs text-gray-500 -mt-1">Live rates are used to convert prices for display.</p>
+                    </div>
+                    <button type="button" onclick="fetchLatestRates()" id="updateRatesBtn" class="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg text-sm transition">Update Rates</button>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg space-y-4">
+                    <!-- Section to display base rates -->
+                    <div id="baseRatesDisplay" class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                        <div class="bg-white p-2 rounded-md border border-gray-200">1 USD = <span id="rateUSD" class="font-bold">...</span> NGN</div>
+                        <div class="bg-white p-2 rounded-md border border-gray-200">1 EUR = <span id="rateEUR" class="font-bold">...</span> NGN</div>
+                        <div class="bg-white p-2 rounded-md border border-gray-200">1 GBP = <span id="rateGBP" class="font-bold">...</span> NGN</div>
+                    </div>
+
+                    <!-- Section for conversion testing tool -->
+                    <div class="pt-4 border-t border-gray-200">
+                        <div class="flex items-center gap-3 mb-2">
+                            <input type="number" id="conversionInput" class="w-full bg-white border border-gray-200 rounded-md px-3 py-2 text-sm" placeholder="Enter amount in NGN to convert">
+                            <span class="font-medium text-gray-700">NGN</span>
+                        </div>
+                        <div id="conversionResults" class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-sm">
+                            <div class="bg-white p-2 rounded-md border border-gray-200"><span id="resultUSD" class="font-bold">0.00</span> USD</div>
+                            <div class="bg-white p-2 rounded-md border border-gray-200"><span id="resultEUR" class="font-bold">0.00</span> EUR</div>
+                            <div class="bg-white p-2 rounded-md border border-gray-200"><span id="resultGBP" class="font-bold">0.00</span> GBP</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-[11px] text-gray-400 text-center">Rates last updated: <span id="ratesLastUpdated">Never</span></p>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100 flex justify-end">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg text-sm transition">Save Settings</button>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script>
+    /*******************************
+     * 1. FIREBASE SETUP
+     *******************************/
+    // Make config global to be accessible by other scripts if needed
+    window.firebaseConfig = {
+        apiKey: "AIzaSyCGBqbJk546uJChQUrIUUIaXt20FOpnyr8",
+        authDomain: "laundry-management-b5198.firebaseapp.com",
+        projectId: "laundry-management-b5198",
+        appId: "1:253804986338:web:464940df509269255803bb",
+    };
+
+    firebase.initializeApp(window.firebaseConfig);
+    const db = firebase.firestore();
+
+    /*******************************
+     * 2. INITIALIZATION & DATA HANDLING
+     *******************************/
+    async function init() {
+        try {
+            await firebase.auth().signInAnonymously();
+            loadSettings();
+        } catch (error) {
+            console.error("Auth failed:", error);
+            showToast("Could not connect to the database.", "error");
+        }
+    }
+
+    function getSettingsDocRef() {
+        return db.collection("artifacts").doc(window.firebaseConfig.appId).collection("public").doc("data").collection("config").doc("app_settings");
+    }
+
+    async function loadSettings() {
+        try { // This outer try-catch handles failures in fetching the document itself
+            const doc = await getSettingsDocRef().get();
+            const settings = doc.exists ? doc.data() : {};
+
+            // This inner try-catch handles errors during UI population, so one bad field doesn't break the whole page
+            try {
+                document.getElementById('businessName').value = settings.businessName || '';
+                document.getElementById('businessAddress').value = settings.businessAddress || '';
+                document.getElementById('currencyCode').value = settings.currencyCode || 'NGN';
+                document.getElementById('taxRate').value = settings.taxRate || 0;
+                document.getElementById('headerBusinessName').textContent = settings.businessName || 'Settings';
+
+                window.currentRates = settings.exchangeRates || {}; // Ensure currentRates is an object
+                updateLastUpdatedTimestamp(settings.ratesLastUpdated);
+            } catch (uiError) {
+                console.error("Error applying settings to UI:", uiError);
+                showToast("There was an error displaying the settings.", "error");
+            }
+        } catch (error) {
+            console.error("Error loading settings:", error);
+            showToast("Failed to load settings.", "error");
+        }
+    }
+
+    // This function is now called after loadSettings to ensure the UI updates
+    function initializeDisplays() {
+        updateBaseRateDisplay();
+        updateConversionDisplay();
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        try {
+            const settingsData = {
+                businessName: document.getElementById('businessName').value.trim(),
+                businessAddress: document.getElementById('businessAddress').value.trim(),
+                currencyCode: document.getElementById('currencyCode').value,
+                taxRate: parseFloat(document.getElementById('taxRate').value) || 0,
+                // Preserve existing exchange rates when saving other settings.
+                exchangeRates: window.currentRates || {},
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (!settingsData.businessName || !settingsData.currencyCode) {
+                throw new Error("Business Name and Currency Code are required.");
+            }
+
+            await getSettingsDocRef().set(settingsData, { merge: true });
+            showToast("Settings saved successfully!", "success");
+            document.getElementById('headerBusinessName').textContent = settingsData.businessName;
+
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save Settings';
+        }
+    });
+
+    async function fetchLatestRates() {
+        const btn = document.getElementById('updateRatesBtn');
+        btn.disabled = true;
+        btn.textContent = 'Fetching...';
+
+        try {
+            // Using an alternative free API that supports NGN. The base is USD by default.
+            const response = await fetch('https://open.er-api.com/v6/latest/USD');
+            if (!response.ok) throw new Error('Network response was not ok.');
+            const data = await response.json();
+
+            if (data.result === 'error') throw new Error(`API error: ${data['error-type']}`);
+
+            // Since our app's base is NGN, we need to calculate rates relative to NGN.
+            // e.g., 1 USD = X NGN, 1 EUR = Y NGN, 1 GBP = Z NGN
+            const ngnPerUsd = data.rates.NGN;
+            const ngnPerEur = data.rates.NGN / data.rates.EUR;
+            const ngnPerGbp = data.rates.NGN / data.rates.GBP;
+
+            const newRates = {
+                USD: ngnPerUsd,
+                EUR: ngnPerEur,
+                GBP: ngnPerGbp,
+            };
+
+            const ratesLastUpdated = firebase.firestore.FieldValue.serverTimestamp();
+
+            // Store rates globally and update the conversion display
+            window.currentRates = newRates;
+            updateBaseRateDisplay();
+            updateConversionDisplay(); // Update both displays
+
+            // Save the new rates and their update timestamp to Firestore
+            await getSettingsDocRef().set({
+                exchangeRates: newRates,
+                ratesLastUpdated: ratesLastUpdated
+            }, { merge: true });
+
+            // Update the timestamp display
+            const el = document.getElementById('ratesLastUpdated');
+            el.textContent = new Date().toLocaleString();
+
+            showToast("Exchange rates updated successfully!", "success");
+
+        } catch (error) {
+            console.error("Failed to fetch exchange rates:", error);
+            showToast("Could not update rates. Please try again later.", "error");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Update Rates';
+        }
+    }
+
+    function updateBaseRateDisplay() {
+        const rates = window.currentRates;
+        if (!rates) return;
+
+        document.getElementById('rateUSD').textContent = rates.USD ? rates.USD.toFixed(2) : '...';
+        document.getElementById('rateEUR').textContent = rates.EUR ? rates.EUR.toFixed(2) : '...';
+        document.getElementById('rateGBP').textContent = rates.GBP ? rates.GBP.toFixed(2) : '...';
+    }
+
+    function updateConversionDisplay() {
+        const rates = window.currentRates;
+        const amount = parseFloat(document.getElementById('conversionInput').value) || 0;
+
+        if (!rates || !rates.USD || !rates.EUR || !rates.GBP) {
+            document.getElementById('resultUSD').textContent = '0.00';
+            document.getElementById('resultEUR').textContent = '0.00';
+            document.getElementById('resultGBP').textContent = '0.00';
+            return;
+        }
+
+        // Display conversion with 2 decimal places for currency values
+        document.getElementById('resultUSD').textContent = (amount / rates.USD).toFixed(2);
+        document.getElementById('resultEUR').textContent = (amount / rates.EUR).toFixed(2);
+        document.getElementById('resultGBP').textContent = (amount / rates.GBP).toFixed(2);
+    }
+
+    function updateLastUpdatedTimestamp(timestamp) {
+        const el = document.getElementById('ratesLastUpdated');
+        if (timestamp) {
+            const date = timestamp instanceof firebase.firestore.Timestamp ? timestamp.toDate() : new Date(timestamp);
+            el.textContent = date.toLocaleString();
+        } else {
+            el.textContent = 'Never';
+        }
+    }
+
+    /*******************************
+     * 3. UTILS
+     *******************************/
+    function showToast(msg, type) {
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+        toastMsg.textContent = msg;
+        toast.className = `fixed top-5 right-5 px-6 py-3 rounded-lg shadow-xl transform transition-transform duration-300 z-[9999] flex items-center gap-3 text-white ${type === 'success' ? 'bg-green-600' : type === 'info' ? 'bg-blue-500' : 'bg-red-600'}`;
+        toast.classList.remove('translate-x-full');
+        setTimeout(() => {
+            toast.classList.add('translate-x-full');
+        }, 3000);
+    }
+
+    // Initialize the page
+    window.currentRates = {}; // Global object to hold rates
+    init().then(() => {
+        // Ensure the display is updated after settings are loaded.
+        initializeDisplays();
+    });
+
+    document.getElementById('conversionInput').addEventListener('input', updateConversionDisplay);
+</script>
+
+</body>
+</html>
